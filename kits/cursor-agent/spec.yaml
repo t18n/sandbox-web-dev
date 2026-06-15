@@ -1,0 +1,46 @@
+schemaVersion: "1"
+kind: sandbox
+name: cursor-agent
+displayName: Cursor Agent
+description: Cursor's coding agent with full web development tooling.
+
+sandbox:
+  image: "ghcr.io/t18n/web-dev-sandbox:latest"
+  entrypoint:
+    run: [cursor-agent]
+
+network:
+  serviceDomains:
+    api2.cursor.sh: cursor
+  serviceAuth:
+    cursor:
+      headerName: Authorization
+      valueFormat: "Bearer %s"
+  allowedDomains:
+    - "api2.cursor.sh:443"
+    - "*.cursor.sh:443"
+    - "cursor.com:443"
+    - "*.cursor.com:443"
+    - "*.npmjs.org:443"
+    - "registry.npmjs.org:443"
+    - "github.com:443"
+
+commands:
+  install:
+    - command: "curl https://cursor.com/install -fsS | bash && ln -sf /home/agent/.local/bin/agent /home/agent/.local/bin/cursor-agent"
+      user: "1000"
+      description: Install Cursor Agent
+
+agentContext: |
+  ## Sandbox environment
+
+  You are running inside a Docker sandbox with a full web development
+  environment. The workspace is mounted at its absolute host path.
+
+  Available tooling:
+  - Node.js 24, Python 3.12, Bun (managed by mise)
+  - TypeScript, tsx, ESLint, Prettier, Biome
+  - Playwright with Chromium, vitest
+  - Docker and Docker Compose
+
+  `sudo` is passwordless. Docker is available inside the sandbox.

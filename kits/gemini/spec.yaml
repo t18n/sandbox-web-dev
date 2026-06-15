@@ -1,0 +1,46 @@
+schemaVersion: "1"
+kind: sandbox
+name: gemini
+displayName: Gemini CLI
+description: Google's Gemini CLI agent with full web development tooling.
+
+sandbox:
+  image: "ghcr.io/t18n/web-dev-sandbox:latest"
+  aiFilename: GEMINI.md
+  entrypoint:
+    run: [gemini, --yolo]
+
+network:
+  serviceDomains:
+    generativelanguage.googleapis.com: google
+  serviceAuth:
+    google:
+      headerName: x-goog-api-key
+      valueFormat: "%s"
+  allowedDomains:
+    - "generativelanguage.googleapis.com:443"
+    - "*.googleapis.com:443"
+    - "*.npmjs.org:443"
+    - "registry.npmjs.org:443"
+    - "github.com:443"
+
+commands:
+  install:
+    - command: "npm install -g @google/gemini-cli"
+      user: "1000"
+      description: Install Gemini CLI
+
+agentContext: |
+  ## Sandbox environment
+
+  You are running inside a Docker sandbox with a full web development
+  environment. The workspace is mounted at its absolute host path.
+
+  Available tooling:
+  - Node.js 24, Python 3.12, Bun (managed by mise)
+  - TypeScript, tsx, ESLint, Prettier, Biome
+  - Playwright with Chromium, vitest
+  - Docker and Docker Compose
+  - psql, redis-cli, sqlite3
+
+  `sudo` is passwordless. Docker is available inside the sandbox.

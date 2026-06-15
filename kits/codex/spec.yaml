@@ -1,0 +1,44 @@
+schemaVersion: "1"
+kind: sandbox
+name: codex
+displayName: Codex
+description: OpenAI's Codex agent with full web development tooling.
+
+sandbox:
+  image: "ghcr.io/t18n/web-dev-sandbox:latest"
+  entrypoint:
+    run: [codex, --full-auto]
+
+network:
+  serviceDomains:
+    api.openai.com: openai
+  serviceAuth:
+    openai:
+      headerName: Authorization
+      valueFormat: "Bearer %s"
+  allowedDomains:
+    - "api.openai.com:443"
+    - "*.npmjs.org:443"
+    - "registry.npmjs.org:443"
+    - "github.com:443"
+
+commands:
+  install:
+    - command: "npm install -g @openai/codex"
+      user: "1000"
+      description: Install Codex
+
+agentContext: |
+  ## Sandbox environment
+
+  You are running inside a Docker sandbox with a full web development
+  environment. The workspace is mounted at its absolute host path.
+
+  Available tooling:
+  - Node.js 24, Python 3.12, Bun (managed by mise)
+  - TypeScript, tsx, ESLint, Prettier, Biome
+  - Playwright with Chromium, vitest
+  - Docker and Docker Compose
+  - psql, redis-cli, sqlite3
+
+  `sudo` is passwordless. Docker is available inside the sandbox.

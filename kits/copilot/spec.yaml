@@ -1,0 +1,39 @@
+schemaVersion: "1"
+kind: sandbox
+name: copilot
+displayName: GitHub Copilot
+description: GitHub Copilot CLI with full web development tooling.
+
+sandbox:
+  image: "ghcr.io/t18n/web-dev-sandbox:latest"
+  entrypoint:
+    run: [copilot]
+
+network:
+  allowedDomains:
+    - "api.github.com:443"
+    - "github.com:443"
+    - "*.githubusercontent.com:443"
+    - "copilot-proxy.githubusercontent.com:443"
+    - "*.npmjs.org:443"
+    - "registry.npmjs.org:443"
+
+commands:
+  install:
+    - command: "npm install -g @github/copilot"
+      user: "1000"
+      description: Install GitHub Copilot CLI
+
+agentContext: |
+  ## Sandbox environment
+
+  You are running inside a Docker sandbox with a full web development
+  environment. The workspace is mounted at its absolute host path.
+
+  Available tooling:
+  - Node.js 24, Python 3.12, Bun (managed by mise)
+  - TypeScript, tsx, ESLint, Prettier, Biome
+  - Playwright with Chromium, vitest
+  - Docker and Docker Compose
+
+  `sudo` is passwordless. Docker is available inside the sandbox.
