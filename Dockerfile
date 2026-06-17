@@ -131,6 +131,3 @@ RUN pip install --user ruff mypy httpie
 FROM tooling AS final
 
 USER agent
-
-# Keep the container alive so sbx can exec into it; kits override with their own entrypoint
-CMD ["sleep", "infinity"]
