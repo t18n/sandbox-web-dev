@@ -170,7 +170,7 @@ sbx run --kit ./kits/gemini/ gemini
 sbx run --kit ./kits/amp/ amp
 
 # Or just the template (no agent, drop into shell)
-sbx run --template ghcr.io/t18n/web-dev-sandbox:latest
+sbx run shell --template ghcr.io/t18n/web-dev-sandbox:latest
 ```
 
 ---
