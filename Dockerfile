@@ -17,7 +17,7 @@
 ##############################################################################
 # base — system packages on top of the Docker-enabled sandbox shell
 ##############################################################################
-FROM docker/sandbox-templates:shell-docker AS base
+FROM docker/sandbox-templates:shell AS base
 
 USER root
 

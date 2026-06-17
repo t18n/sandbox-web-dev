@@ -15,6 +15,10 @@ build:
 push:
     docker buildx build --push -t {{full_image}} .
 
+# Pull the latest template image from registry
+pull-remote-image:
+    docker image pull ghcr.io/t18n/web-dev-sandbox:latest
+
 # Build a specific stage and drop into a shell to inspect it
 inspect stage="final":
     docker buildx build --load --target {{stage}} -t {{image}}-inspect:{{stage}} . \
