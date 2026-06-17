@@ -124,10 +124,3 @@ RUN npm install -g playwright @playwright/test puppeteer vitest
 
 # Python dev tools
 RUN pip install --user ruff mypy httpie
-
-##############################################################################
-# final — the published template image
-##############################################################################
-FROM tooling AS final
-
-USER agent
