@@ -52,7 +52,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 \
     libcups2 libdrm2 libxkbcommon0 libxcomposite1 \
     libxdamage1 libxfixes3 libxrandr2 libgbm1 \
-    libpango-1.0-0 libcairo2 libasound2 libatspi2.0-0 \
+    libpango-1.0-0 libcairo2 libasound2t64 libatspi2.0-0 \
     # Misc
     xdg-utils \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
@@ -78,9 +78,13 @@ FROM base AS runtimes
 
 USER agent
 
-# Install mise binary
-RUN mkdir -p /home/agent/.local/bin \
-    && curl -fsSL https://mise.jdx.dev/mise-latest-linux-x64 \
+# Install mise binary (via GitHub releases — arch-aware)
+RUN set -eux; \
+    MISE_VER=$(curl -fsSL https://api.github.com/repos/jdx/mise/releases/latest \
+        | grep '"tag_name"' | head -1 | sed 's/.*"v\([^"]*\)".*/\1/'); \
+    ARCH=$(uname -m | sed 's/x86_64/x64/;s/aarch64/arm64/'); \
+    mkdir -p /home/agent/.local/bin \
+    && curl -fsSL "https://github.com/jdx/mise/releases/download/v${MISE_VER}/mise-v${MISE_VER}-linux-${ARCH}" \
        -o /home/agent/.local/bin/mise \
     && chmod +x /home/agent/.local/bin/mise
 
@@ -112,14 +116,11 @@ RUN npm install -g typescript tsx ts-node
 RUN npm install -g eslint prettier @biomejs/biome
 
 # Testing — Playwright (bundles the playwright CLI), Puppeteer, Vitest
-RUN npm install -g playwright @playwright/test puppeteer vitest
-
-# Install Playwright Chromium + headless shell (CI-friendly, no GUI needed)
-RUN npx playwright install --with-deps chromium chromium-headless-shell
-
-# Install Puppeteer's Chrome + headless shell into a shared cache
+# Skip browser downloads at build time; sandbox has network access at runtime
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV PUPPETEER_CACHE_DIR=/home/agent/.cache/puppeteer
-RUN npx puppeteer browsers install chrome chrome-headless-shell
+RUN npm install -g playwright @playwright/test puppeteer vitest
 
 # Python dev tools
 RUN pip install --user ruff mypy httpie

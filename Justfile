@@ -1,5 +1,5 @@
 image := "web-dev-sandbox"
-registry := env("DOCKER_REGISTRY", "docker.io/" + env("DOCKER_USERNAME", ""))
+registry := env("DOCKER_REGISTRY", "ghcr.io/t18n")
 tag := env("IMAGE_TAG", "latest")
 full_image := registry + "/" + image + ":" + tag
 
