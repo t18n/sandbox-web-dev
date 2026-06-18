@@ -5,19 +5,15 @@
 # A full development environment image for Docker sandboxes.
 # This is the template layer — agent-specific configuration lives in kits.
 #
-# Base: docker/sandbox-templates:shell-docker (includes Docker CE)
-# Tooling: mise (Node 24, Python 3.12, Bun), TypeScript, Playwright,
-#          Puppeteer, headless Chromium, ESLint, Prettier, database CLIs,
-#          build tools, shell utilities
+# Base: docker/sandbox-templates:shell
+# Tooling: Node.js 24, TypeScript, Playwright, Puppeteer, ESLint, Prettier,
+#          Biome, database CLIs, build tools, shell utilities
 #
 # Usage with kits:
 #   sbx run --kit ./kits/claude-code/ claude
 #   sbx run --kit ./kits/gemini/ gemini
 
-##############################################################################
-# base — system packages on top of the Docker-enabled sandbox shell
-##############################################################################
-FROM docker/sandbox-templates:shell AS base
+FROM docker/sandbox-templates:shell
 
 USER root
 
@@ -29,7 +25,16 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
        "$(dpkg --print-architecture)" \
        > /etc/apt/sources.list.d/github-cli.list
 
+# Node.js 24 from NodeSource
+RUN mkdir -p /etc/apt/keyrings \
+    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+        | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
+    && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_24.x nodistro main" \
+        > /etc/apt/sources.list.d/nodesource.list
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Node.js
+    nodejs \
     # GitHub CLI
     gh \
     # Version control
@@ -37,6 +42,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Build toolchain (native addons, C/C++ compilation)
     build-essential \
     cmake \
+    # Python
+    python3 \
+    python3-pip \
     # Database CLIs
     postgresql-client \
     redis-tools \
@@ -64,50 +72,15 @@ RUN YQ_VER=$(curl -fsSL https://api.github.com/repos/mikefarah/yq/releases/lates
        -o /usr/local/bin/yq \
     && chmod +x /usr/local/bin/yq
 
-# Ensure npm-global dir is writable by agent
-RUN mkdir -p /usr/local/share/npm-global/bin \
-    && chown -R agent:agent /usr/local/share/npm-global
-
-# npm globals always land at this prefix
-ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
-
-##############################################################################
-# runtimes — mise + managed language versions
-##############################################################################
-FROM base AS runtimes
-
 USER agent
 
-# Install mise binary (via GitHub releases — arch-aware)
-RUN set -eux; \
-    MISE_VER=$(curl -fsSL https://api.github.com/repos/jdx/mise/releases/latest \
-        | grep '"tag_name"' | head -1 | sed 's/.*"v\([^"]*\)".*/\1/'); \
-    ARCH=$(uname -m | sed 's/x86_64/x64/;s/aarch64/arm64/'); \
-    mkdir -p /home/agent/.local/bin \
-    && curl -fsSL "https://github.com/jdx/mise/releases/download/v${MISE_VER}/mise-v${MISE_VER}-linux-${ARCH}" \
-       -o /home/agent/.local/bin/mise \
-    && chmod +x /home/agent/.local/bin/mise
+# agent-local npm "global" installs
+RUN mkdir -p "$HOME/.npm-global" \
+    && npm config set prefix "$HOME/.npm-global" \
+    && printf '\n# npm user-global prefix\nexport PATH="$HOME/.npm-global/bin:$PATH"\n' >> ~/.bashrc
 
-# Extend PATH: mise shims first so managed tools shadow system versions
-ENV PATH=/home/agent/.local/share/mise/shims:/home/agent/.local/bin:/usr/local/share/npm-global/bin:$PATH
-
-# Persist PATH into sandbox runtime
-RUN printf 'export PATH="/home/agent/.local/share/mise/shims:/home/agent/.local/bin:/usr/local/share/npm-global/bin:$PATH"\n' \
-    >> /etc/sandbox-persistent.sh
-
-# Language runtimes
-RUN mise use --global node@24 python@3.12 bun@latest \
-    && mise install
-
-# Global package managers
+# Package managers
 RUN npm install -g pnpm yarn
-
-##############################################################################
-# tooling — development tools baked into the template
-##############################################################################
-FROM runtimes AS tooling
-
-USER agent
 
 # TypeScript toolchain
 RUN npm install -g typescript tsx ts-node
@@ -115,12 +88,14 @@ RUN npm install -g typescript tsx ts-node
 # Linting and formatting
 RUN npm install -g eslint prettier @biomejs/biome
 
-# Testing — Playwright (bundles the playwright CLI), Puppeteer, Vitest
-# Skip browser downloads at build time; sandbox has network access at runtime
+# Testing — skip browser downloads at build time; sandbox has network access at runtime
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV PUPPETEER_CACHE_DIR=/home/agent/.cache/puppeteer
-RUN npm install -g playwright @playwright/test puppeteer vitest
+RUN npm install -g --ignore-scripts playwright @playwright/test puppeteer vitest
 
 # Python dev tools
-RUN pip install --user ruff mypy httpie
+RUN pip3 install --user --break-system-packages ruff mypy httpie
+
+# Keep the container alive so sbx can exec into it; kits override with their own entrypoint
+CMD ["sleep", "infinity"]
